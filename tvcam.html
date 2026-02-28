@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عرض بث الرسيفر</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; }
+        video { width: 90%; max-width: 720px; border: 3px solid #00ff00; background: #000; }
+        select, button { padding: 10px; margin: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h3>شاشة عرض الرسيفر (EasyCap)</h3>
+    <video id="video" autoplay playsinline></video>
+    <br>
+    <select id="deviceSelect"><option>جاري البحث عن أجهزة...</option></select>
+    <button id="startBtn">تشغيل العرض</button>
+
+    <script>
+        const videoElement = document.getElementById('video');
+        const deviceSelect = document.getElementById('deviceSelect');
+        const startBtn = document.getElementById('startBtn');
+
+        // جلب قائمة الكاميرات المتاحة
+        async function getDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
+            deviceSelect.innerHTML = videoDevices.map(d => 
+                `<option value="${d.deviceId}">${d.label || 'كاميرا ' + (deviceSelect.length + 1)}</option>`
+            ).join('');
+        }
+
+        startBtn.onclick = async () => {
+            const constraints = {
+                video: { deviceId: { exact: deviceSelect.value } }
+            };
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = stream;
+            } catch (e) {
+                alert("خطأ: تأكد من استخدام HTTPS أو localhost ومنح صلاحية الكاميرا.");
+            }
+        };
+
+        // طلب الإذن أولاً لتظهر أسماء الأجهزة
+        navigator.mediaDevices.getUserMedia({ video: true }).then(getDevices);
+    </script>
+</body>
+</html>
