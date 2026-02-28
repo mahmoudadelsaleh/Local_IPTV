@@ -3,48 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عرض بث الرسيفر</title>
+    <title>مشغل الرسيفر - EasyCap Web</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; }
-        video { width: 90%; max-width: 720px; border: 3px solid #00ff00; background: #000; }
-        select, button { padding: 10px; margin: 10px; font-size: 16px; }
+        :root { --main-color: #00e676; --bg-color: #121212; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: white; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .container { width: 95%; max-width: 800px; text-align: center; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        video { width: 100%; border-radius: 10px; background: #000; border: 2px solid #333; margin-bottom: 15px; }
+        .controls { display: grid; gap: 10px; grid-template-columns: 1fr; }
+        select, button { padding: 12px; border-radius: 8px; border: none; font-size: 16px; outline: none; }
+        select { background: #333; color: white; cursor: pointer; }
+        button { background: var(--main-color); color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        .status { margin-top: 10px; font-size: 14px; color: #888; }
     </style>
 </head>
 <body>
-    <h3>شاشة عرض الرسيفر (EasyCap)</h3>
-    <video id="video" autoplay playsinline></video>
-    <br>
-    <select id="deviceSelect"><option>جاري البحث عن أجهزة...</option></select>
-    <button id="startBtn">تشغيل العرض</button>
 
-    <script>
-        const videoElement = document.getElementById('video');
-        const deviceSelect = document.getElementById('deviceSelect');
-        const startBtn = document.getElementById('startBtn');
+<div class="container">
+    <h2>شاشة عرض الرسيفر 📺</h2>
+    
+    <video id="videoRender" autoplay playsinline muted></video>
+    
+    <div class="controls">
+        <label>اختر وصلة الـ EasyCap (الفيديو):</label>
+        <select id="videoSource"></select>
+        
+        <label>اختر مصدر الصوت (USB Audio):</label>
+        <select id="audioSource"></select>
+        
+        <button id="startBtn">تشغيل البث الآن</button>
+    </div>
+    
+    <div class="status" id="statusMsg">يرجى توصيل الوصلة والضغط على تشغيل</div>
+</div>
 
-        // جلب قائمة الكاميرات المتاحة
-        async function getDevices() {
+<script>
+    const videoElement = document.getElementById('videoRender');
+    const videoSelect = document.getElementById('videoSource');
+    const audioSelect = document.getElementById('audioSource');
+    const startBtn = document.getElementById('startBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    // جلب قائمة الأجهزة المتاحة (فيديو وصوت)
+    async function getDevices() {
+        try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(d => d.kind === 'videoinput');
-            deviceSelect.innerHTML = videoDevices.map(d => 
-                `<option value="${d.deviceId}">${d.label || 'كاميرا ' + (deviceSelect.length + 1)}</option>`
-            ).join('');
+            
+            videoSelect.innerHTML = '';
+            audioSelect.innerHTML = '';
+
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                if (device.kind === 'videoinput') {
+                    option.text = device.label || `كاميرا ${videoSelect.length + 1}`;
+                    videoSelect.appendChild(option);
+                } else if (device.kind === 'audioinput') {
+                    option.text = device.label || `ميكروفون ${audioSelect.length + 1}`;
+                    audioSelect.appendChild(option);
+                }
+            });
+        } catch (err) {
+            statusMsg.innerText = "خطأ في التعرف على الأجهزة: " + err.message;
+        }
+    }
+
+    // تشغيل البث
+    async function startStream() {
+        if (window.stream) {
+            window.stream.getTracks().forEach(track => track.stop());
         }
 
-        startBtn.onclick = async () => {
-            const constraints = {
-                video: { deviceId: { exact: deviceSelect.value } }
-            };
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = stream;
-            } catch (e) {
-                alert("خطأ: تأكد من استخدام HTTPS أو localhost ومنح صلاحية الكاميرا.");
+        const videoSource = videoSelect.value;
+        const audioSource = audioSelect.value;
+
+        const constraints = {
+            video: { 
+                deviceId: videoSource ? { exact: videoSource } : undefined,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: { 
+                deviceId: audioSource ? { exact: audioSource } : undefined 
             }
         };
 
-        // طلب الإذن أولاً لتظهر أسماء الأجهزة
-        navigator.mediaDevices.getUserMedia({ video: true }).then(getDevices);
-    </script>
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            window.stream = stream;
+            videoElement.srcObject = stream;
+            
+            // تفعيل الصوت ليخرج من سماعة الموبايل
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(audioContext.destination);
+            
+            statusMsg.innerText = "البث يعمل الآن بنجاح!";
+            statusMsg.style.color = "#00e676";
+        } catch (err) {
+            statusMsg.innerText = "خطأ: " + err.message;
+            statusMsg.style.color = "#ff5252";
+        }
+    }
+
+    // طلب الإذن المبدئي لتظهر أسماء الأجهزة
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(() => {
+            getDevices();
+            statusMsg.innerText = "تم التعرف على الأجهزة. اختر الوصلة واضغط تشغيل.";
+        })
+        .catch(err => {
+            statusMsg.innerText = "يرجى إعطاء صلاحية الكاميرا والميكروفون.";
+        });
+
+    startBtn.onclick = startStream;
+    
+    // تحديث القائمة عند توصيل/فصل جهاز
+    navigator.mediaDevices.ondevicechange = getDevices;
+
+</script>
+
 </body>
 </html>
