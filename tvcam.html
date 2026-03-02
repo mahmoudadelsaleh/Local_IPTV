@@ -3,38 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشغل الرسيفر - EasyCap Web</title>
+    <title>مشغل EasyCap الاحترافي</title>
     <style>
         :root { --main-color: #00e676; --bg-color: #121212; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: white; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: white; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
         .container { width: 95%; max-width: 800px; text-align: center; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        video { width: 100%; border-radius: 10px; background: #000; border: 2px solid #333; margin-bottom: 15px; }
-        .controls { display: grid; gap: 10px; grid-template-columns: 1fr; }
-        select, button { padding: 12px; border-radius: 8px; border: none; font-size: 16px; outline: none; }
-        select { background: #333; color: white; cursor: pointer; }
+        video { width: 100%; border-radius: 10px; background: #000; border: 2px solid #333; margin-bottom: 15px; transform: scaleX(1); /* تعدل إذا كانت الصورة مقلوبة */ }
+        .controls { display: grid; gap: 15px; grid-template-columns: 1fr; margin-bottom: 20px; }
+        select, button { padding: 14px; border-radius: 8px; border: none; font-size: 16px; }
+        select { background: #333; color: white; cursor: pointer; width: 100%; }
         button { background: var(--main-color); color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:active { transform: scale(0.98); }
-        .status { margin-top: 10px; font-size: 14px; color: #888; }
+        button:hover { opacity: 0.9; }
+        .status { margin-top: 10px; font-size: 14px; color: #888; padding: 10px; border-radius: 5px; background: #252525; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>شاشة عرض الرسيفر 📺</h2>
-    
+
     <video id="videoRender" autoplay playsinline muted></video>
-    
+
     <div class="controls">
-        <label>اختر وصلة الـ EasyCap (الفيديو):</label>
-        <select id="videoSource"></select>
-        
-        <label>اختر مصدر الصوت (USB Audio):</label>
-        <select id="audioSource"></select>
-        
+        <div>
+            <label>مصدر الفيديو (EasyCap):</label>
+            <select id="videoSource"></select>
+        </div>
+
+        <div>
+            <label>مصدر الصوت (USB Audio):</label>
+            <select id="audioSource"></select>
+        </div>
+
         <button id="startBtn">تشغيل البث الآن</button>
     </div>
-    
-    <div class="status" id="statusMsg">يرجى توصيل الوصلة والضغط على تشغيل</div>
+
+    <div class="status" id="statusMsg">انتظار التعرف على الوصلة...</div>
 </div>
 
 <script>
@@ -43,12 +47,13 @@
     const audioSelect = document.getElementById('audioSource');
     const startBtn = document.getElementById('startBtn');
     const statusMsg = document.getElementById('statusMsg');
+    
+    let audioCtx;
 
-    // جلب قائمة الأجهزة المتاحة (فيديو وصوت)
+    // جلب قائمة الأجهزة
     async function getDevices() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            
             videoSelect.innerHTML = '';
             audioSelect.innerHTML = '';
 
@@ -56,35 +61,33 @@
                 const option = document.createElement('option');
                 option.value = device.deviceId;
                 if (device.kind === 'videoinput') {
-                    option.text = device.label || `كاميرا ${videoSelect.length + 1}`;
+                    option.text = device.label || `EasyCap Video ${videoSelect.length + 1}`;
                     videoSelect.appendChild(option);
                 } else if (device.kind === 'audioinput') {
-                    option.text = device.label || `ميكروفون ${audioSelect.length + 1}`;
+                    option.text = device.label || `USB Audio ${audioSelect.length + 1}`;
                     audioSelect.appendChild(option);
                 }
             });
         } catch (err) {
-            statusMsg.innerText = "خطأ في التعرف على الأجهزة: " + err.message;
+            statusMsg.innerText = "خطأ في سرد الأجهزة: " + err.message;
         }
     }
 
-    // تشغيل البث
+    // تشغيل البث مع إعدادات مرنة (Flexible Constraints)
     async function startStream() {
         if (window.stream) {
             window.stream.getTracks().forEach(track => track.stop());
         }
 
-        const videoSource = videoSelect.value;
-        const audioSource = audioSelect.value;
-
         const constraints = {
-            video: { 
-                deviceId: videoSource ? { exact: videoSource } : undefined,
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+            video: {
+                deviceId: videoSelect.value ? { exact: videoSelect.value } : undefined,
+                // إلغاء تحديد العرض والارتفاع الصارم للسماح للوصلة بالعمل بدقتها الأصلية
+                width: { ideal: 720 },
+                height: { ideal: 576 }
             },
-            audio: { 
-                deviceId: audioSource ? { exact: audioSource } : undefined 
+            audio: {
+                deviceId: audioSelect.value ? { exact: audioSelect.value } : undefined
             }
         };
 
@@ -92,35 +95,45 @@
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             window.stream = stream;
             videoElement.srcObject = stream;
+
+            // معالجة الصوت ليخرج من مكبر صوت الموبايل
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
             
-            // تفعيل الصوت ليخرج من سماعة الموبايل
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(stream);
-            source.connect(audioContext.destination);
-            
-            statusMsg.innerText = "البث يعمل الآن بنجاح!";
+            // في حالة كان الـ AudioContext في وضع تعليق (بسبب سياسة المتصفح)
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            const source = audioCtx.createMediaStreamSource(stream);
+            source.connect(audioCtx.destination);
+
+            statusMsg.innerText = "متصل بنجاح! جاري عرض البث...";
             statusMsg.style.color = "#00e676";
         } catch (err) {
-            statusMsg.innerText = "خطأ: " + err.message;
+            console.error(err);
+            statusMsg.innerText = "خطأ: تأكد من اختيار الجهاز الصحيح وإعطاء الصلاحيات.";
             statusMsg.style.color = "#ff5252";
         }
     }
 
-    // طلب الإذن المبدئي لتظهر أسماء الأجهزة
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(() => {
-            getDevices();
-            statusMsg.innerText = "تم التعرف على الأجهزة. اختر الوصلة واضغط تشغيل.";
-        })
-        .catch(err => {
-            statusMsg.innerText = "يرجى إعطاء صلاحية الكاميرا والميكروفون.";
-        });
+    // طلب الإذن المبدئي وتحديث القائمة
+    async function init() {
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            await getDevices();
+            statusMsg.innerText = "تم العثور على الوصلة. اخترها من القائمة واضغط تشغيل.";
+        } catch (err) {
+            statusMsg.innerText = "يجب السماح بالوصول للكاميرا والميكروفون لتعمل الوصلة.";
+        }
+    }
 
     startBtn.onclick = startStream;
-    
-    // تحديث القائمة عند توصيل/فصل جهاز
     navigator.mediaDevices.ondevicechange = getDevices;
 
+    // تشغيل التهيئة عند تحميل الصفحة
+    init();
 </script>
 
 </body>
