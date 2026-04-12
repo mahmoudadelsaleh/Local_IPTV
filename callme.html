@@ -3,49 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كاشف أرقام الفواتير المتطور</title>
+    <title>كاشف الفواتير الذكي</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #video, #preview-img { width: 100%; border-radius: 10px; display: none; margin-bottom: 10px; }
-        #canvas { display: none; }
-        button, label { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; margin: 10px 5px; font-size: 16px; display: inline-block; width: 80%; }
-        .upload-btn { background: #6c757d; } /* لون مختلف لزر الرفع */
-        .result-box { margin-top: 20px; display: none; padding: 15px; border: 2px dashed #007bff; border-radius: 10px; }
-        .options-btn { background: #28a745; width: 100%; }
-        .wa-btn { background: #25D366; }
-        .save-btn { background: #ffc107; color: black; }
-        #status { color: #555; margin: 10px 0; font-weight: bold; }
-        input[type="file"] { display: none; } /* إخفاء زر الملفات الافتراضي */
+        :root { --primary: #007bff; --success: #25D366; --warning: #ffc107; --dark: #343a40; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        #video, #preview-img { width: 100%; border-radius: 15px; display: none; margin-bottom: 15px; border: 2px solid #ddd; }
+        button, .btn { padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; margin: 5px 0; width: 100%; display: block; }
+        .btn-main { background: var(--primary); color: white; }
+        .btn-upload { background: #6c757d; color: white; }
+        
+        .result-box { display: none; background: #fff; border: 2px solid var(--primary); border-radius: 15px; padding: 15px; margin-top: 20px; text-align: right; }
+        .info-row { margin-bottom: 10px; font-size: 18px; color: var(--dark); }
+        .info-row b { color: var(--primary); }
+
+        .message-section { margin-top: 15px; text-align: right; }
+        .msg-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 5px; box-sizing: border-box; }
+        .msg-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .msg-chip { background: #e9ecef; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; border: 1px solid #ddd; }
+        .msg-chip:hover { background: #dee2e6; }
+        .msg-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .wa-btn { background: var(--success); color: white; }
+        .call-btn { background: #007bff; color: white; }
+        .save-btn { background: var(--warning); color: #212529; }
+        #status { font-size: 14px; color: #666; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>التقاط رقم الهاتف من الفاتورة</h2>
-    
-    <video id="video" autoplay playsinline></video>
-    <img id="preview-img" alt="معاينة الصورة">
-    <canvas id="canvas"></canvas>
+    <h2>كاشف الفواتير الذكي 🚀</h2>
+    <div id="status">جاهز للمسح الضوئي...</div>
 
-    <div id="controls">
-        <button id="start-btn">فتح الكاميرا</button>
-        
-        <label for="file-upload" class="upload-btn">اختر صورة من الجهاز</label>
-        <input type="file" id="file-upload" accept="image/*">
-        
-        <button id="capture-btn" style="display:none;">التقاط ومعالجة</button>
-    </div>
-    
-    <div id="status">جاهز للاستخدام</div>
+    <video id="video" autoplay playsinline></video>
+    <img id="preview-img">
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <button class="btn btn-main" id="start-btn">📸 فتح الكاميرا</button>
+    <label class="btn btn-upload" for="file-upload">📁 اختر صورة من الاستوديو</label>
+    <input type="file" id="file-upload" accept="image/*" style="display:none;">
+    <button class="btn btn-main" id="capture-btn" style="display:none;">🖼️ التقاط ومعالجة</button>
 
     <div id="result-area" class="result-box">
-        <p>الرقم المكتشف: <strong id="phone-number"></strong></p>
-        <hr>
-        <button class="options-btn" id="call-btn">📞 اتصال</button>
-        <button class="options-btn wa-btn" id="wa-btn">💬 واتساب</button>
-        <button class="options-btn save-btn" id="save-btn">👤 حفظ في الهاتف</button>
+        <div class="info-row">الاسم: <b id="res-name">---</b></div>
+        <div class="info-row">الرقم: <b id="res-phone">---</b></div>
+        
+        <div class="message-section">
+            <label>اختر رسالة جاهزة أو اكتب واحدة:</label>
+            <div id="msg-list" class="msg-list"></div>
+            <textarea id="custom-msg" class="msg-input" rows="2" placeholder="اكتب رسالتك هنا..."></textarea>
+            <button class="btn btn-upload" onclick="saveNewMessage()">💾 حفظ كرسالة جاهزة</button>
+        </div>
+
+        <div class="actions-grid">
+            <button class="btn wa-btn" id="wa-btn">💬 واتساب</button>
+            <button class="btn call-btn" id="call-btn">📞 اتصال</button>
+            <button class="btn save-btn" id="save-btn" style="grid-column: span 2;">👤 حفظ في الهاتف (vCard)</button>
+        </div>
     </div>
 </div>
 
@@ -53,107 +70,123 @@
     const video = document.getElementById('video');
     const previewImg = document.getElementById('preview-img');
     const canvas = document.getElementById('canvas');
-    const startBtn = document.getElementById('start-btn');
-    const captureBtn = document.getElementById('capture-btn');
-    const fileUpload = document.getElementById('file-upload');
     const status = document.getElementById('status');
     const resultArea = document.getElementById('result-area');
-    const phoneDisplay = document.getElementById('phone-number');
+    const msgListDiv = document.getElementById('msg-list');
+    const customMsgInput = document.getElementById('custom-msg');
 
-    let detectedNumber = "";
+    let detectedData = { name: "من الفاتورة", phone: "" };
+    let savedMessages = JSON.parse(localStorage.getItem('my_messages')) || ["أهلاً بك، نود التأكيد على طلبك.", "طلبك جاهز للتوصيل."];
 
-    // --- 1. التعامل مع الكاميرا ---
-    startBtn.onclick = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" } 
-            });
-            video.srcObject = stream;
-            video.style.display = "block";
-            previewImg.style.display = "none";
-            startBtn.style.display = "none";
-            captureBtn.style.display = "inline-block";
-            status.innerText = "الكاميرا تعمل... وجهها نحو الرقم";
-        } catch (err) {
-            alert("خطأ في تشغيل الكاميرا: " + err);
+    // --- إدارة الرسائل الجاهزة ---
+    function renderMessages() {
+        msgListDiv.innerHTML = '';
+        savedMessages.forEach((msg, index) => {
+            const chip = document.createElement('div');
+            chip.className = 'msg-chip';
+            chip.innerText = msg.substring(0, 20) + '...';
+            chip.onclick = () => {
+                customMsgInput.value = msg;
+                document.querySelectorAll('.msg-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            };
+            msgListDiv.appendChild(chip);
+        });
+    }
+
+    function saveNewMessage() {
+        const val = customMsgInput.value.trim();
+        if (val && !savedMessages.includes(val)) {
+            savedMessages.push(val);
+            localStorage.setItem('my_messages', JSON.stringify(savedMessages));
+            renderMessages();
         }
+    }
+
+    // --- تشغيل الكاميرا والرفع ---
+    document.getElementById('start-btn').onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        video.style.display = "block";
+        previewImg.style.display = "none";
+        document.getElementById('capture-btn').style.display = "block";
     };
 
-    captureBtn.onclick = () => {
-        const context = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        processImage(canvas.toDataURL('image/png'));
-    };
-
-    // --- 2. التعامل مع ملفات الصور من الجهاز ---
-    fileUpload.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
+    document.getElementById('file-upload').onchange = (e) => {
         const reader = new FileReader();
-        reader.onload = (event) => {
-            const imgData = event.target.result;
-            // إظهار معاينة للصورة المرفوعة
-            previewImg.src = imgData;
+        reader.onload = (ev) => {
+            previewImg.src = ev.target.result;
             previewImg.style.display = "block";
-            video.style.display = "none"; // إخفاء الكاميرا إذا كانت تعمل
-            captureBtn.style.display = "none";
-            startBtn.style.display = "inline-block";
-            
-            processImage(imgData);
+            video.style.display = "none";
+            processOCR(ev.target.result);
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(e.target.files[0]);
     };
 
-    // --- 3. وظيفة المعالجة الموحدة (Tesseract) ---
-    function processImage(source) {
-        status.innerText = "جاري التعرف على الرقم... انتظر لحظة";
-        resultArea.style.display = "none";
+    document.getElementById('capture-btn').onclick = () => {
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        processOCR(canvas.toDataURL('image/png'));
+    };
 
-        Tesseract.recognize(source, 'eng')
-            .then(({ data: { text } }) => {
-                console.log("النص المستخرج:", text); // لمتابعة النتائج في القنصل
-                extractPhone(text);
-            })
-            .catch(err => {
-                status.innerText = "حدث خطأ أثناء المعالجة";
-                console.error(err);
-            });
+    // --- معالجة الصور واستخراج البيانات ---
+    function processOCR(source) {
+        status.innerText = "جاري القراءة والتحليل... ⏳";
+        Tesseract.recognize(source, 'eng+ara') // دعم العربية والإنجليزية
+            .then(({ data: { text } }) => analyzeText(text))
+            .catch(() => status.innerText = "فشل في قراءة الصورة");
     }
 
-    // --- 4. استخراج الرقم باستخدام Regex ---
-    function extractPhone(text) {
-        // تنظيف النص من المسافات والشرطات لزيادة دقة البحث
-        const cleanedText = text.replace(/[\s-]/g, '');
-        // Regex يبحث عن أرقام مصرية (010, 011, 012, 015)
+    function analyzeText(rawText) {
+        console.log("النص المكتشف:", rawText);
+        
+        // 1. استخراج الرقم
         const phoneRegex = /01[0125][0-9]{8}/;
-        const match = cleanedText.match(phoneRegex);
+        const phoneMatch = rawText.replace(/[\s-]/g, '').match(phoneRegex);
 
-        if (match) {
-            detectedNumber = match[0];
-            phoneDisplay.innerText = detectedNumber;
+        // 2. استخراج الاسم (محاولة البحث عن كلمة العميل أو Name)
+        let name = "غير معروف";
+        const lines = rawText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes("العميل") || lines[i].toLowerCase().includes("customer") || lines[i].toLowerCase().includes("mohamed")) {
+                // نأخذ السطر الحالي أو الذي يليه كمحاولة لاستخراج الاسم
+                name = lines[i].replace(/العميل|:|Customer/gi, '').trim() || (lines[i+1] ? lines[i+1].trim() : "من الفاتورة");
+                break;
+            }
+        }
+
+        if (phoneMatch) {
+            detectedData.phone = phoneMatch[0];
+            detectedData.name = name;
+            document.getElementById('res-name').innerText = name;
+            document.getElementById('res-phone').innerText = phoneMatch[0];
             resultArea.style.display = "block";
-            status.innerText = "تم العثور على الرقم!";
+            status.innerText = "تمت العملية بنجاح! ✅";
         } else {
-            status.innerText = "لم يتم العثور على رقم واضح، حاول مرة أخرى أو تأكد من إضاءة الصورة.";
+            status.innerText = "تعذر العثور على رقم هاتف واضح ❌";
         }
     }
 
-    // --- 5. أزرار الأكشن (اتصال، واتساب، حفظ) ---
-    document.getElementById('call-btn').onclick = () => window.location.href = `tel:${detectedNumber}`;
-    document.getElementById('wa-btn').onclick = () => window.open(`https://wa.me/2${detectedNumber}`, '_blank');
+    // --- الأكشن النهائي ---
+    document.getElementById('wa-btn').onclick = () => {
+        const msg = encodeURIComponent(customMsgInput.value);
+        window.open(`https://wa.me/2${detectedData.phone}?text=${msg}`, '_blank');
+    };
+
+    document.getElementById('call-btn').onclick = () => window.location.href = `tel:${detectedData.phone}`;
+
     document.getElementById('save-btn').onclick = () => {
-        const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:من الفاتورة\nTEL;TYPE=CELL:${detectedNumber}\nEND:VCARD`;
+        const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${detectedData.name}\nTEL;TYPE=CELL:${detectedData.phone}\nEND:VCARD`;
         const blob = new Blob([vcard], { type: "text/vcard" });
         const url = URL.createObjectURL(blob);
-        const newLink = document.createElement('a');
-        newLink.download = `contact_${detectedNumber}.vcf`;
-        newLink.href = url;
-        newLink.click();
+        const a = document.createElement('a');
+        a.download = `${detectedData.name}.vcf`;
+        a.href = url;
+        a.click();
     };
 
+    renderMessages();
 </script>
 </body>
 </html>
