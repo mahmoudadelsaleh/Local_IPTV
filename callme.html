@@ -2,191 +2,222 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كاشف الفواتير الذكي</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>كاشف الفواتير الاحترافي</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
     <style>
-        :root { --primary: #007bff; --success: #25D366; --warning: #ffc107; --dark: #343a40; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        #video, #preview-img { width: 100%; border-radius: 15px; display: none; margin-bottom: 15px; border: 2px solid #ddd; }
-        button, .btn { padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; margin: 5px 0; width: 100%; display: block; }
-        .btn-main { background: var(--primary); color: white; }
-        .btn-upload { background: #6c757d; color: white; }
+        :root { --primary: #007bff; --success: #25D366; --bg: #f8f9fa; }
         
-        .result-box { display: none; background: #fff; border: 2px solid var(--primary); border-radius: 15px; padding: 15px; margin-top: 20px; text-align: right; }
-        .info-row { margin-bottom: 10px; font-size: 18px; color: var(--dark); }
-        .info-row b { color: var(--primary); }
+        /* ضبط الصفحة لتكون متمركزة وبدون تمرير عرضي */
+        html, body { 
+            height: 100%; margin: 0; padding: 0; 
+            overflow-x: hidden; background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
-        .message-section { margin-top: 15px; text-align: right; }
-        .msg-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 5px; box-sizing: border-box; }
+        .container { 
+            width: 95%; max-width: 450px; background: white; 
+            padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box; text-align: center;
+        }
+
+        /* حاوية الصور والقص */
+        .image-wrapper { 
+            width: 100%; min-height: 200px; background: #eee; 
+            border-radius: 15px; overflow: hidden; margin-bottom: 15px;
+            position: relative;
+        }
+        img { max-width: 100%; display: block; }
+        #video { width: 100%; display: none; border-radius: 15px; }
+
+        .btn { 
+            width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; 
+            border: none; font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-size: 16px; display: block; box-sizing: border-box;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: #6c757d; color: white; }
+        .btn-rotate { background: #f39c12; color: white; width: 48%; display: inline-block; }
+
+        /* منطقة النتائج والرسائل */
+        .result-box { 
+            display: none; border: 2px solid var(--primary); 
+            border-radius: 15px; padding: 15px; margin-top: 15px; text-align: right;
+        }
+        .msg-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin: 10px 0; box-sizing: border-box; }
         .msg-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-        .msg-chip { background: #e9ecef; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; border: 1px solid #ddd; }
-        .msg-chip:hover { background: #dee2e6; }
-        .msg-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .chip { background: #e9ecef; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; }
+        .chip.active { background: var(--primary); color: white; }
 
-        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .wa-btn { background: var(--success); color: white; }
-        .call-btn { background: #007bff; color: white; }
-        .save-btn { background: var(--warning); color: #212529; }
-        #status { font-size: 14px; color: #666; margin: 10px 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        #status { font-size: 13px; color: #777; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>كاشف الفواتير الذكي 🚀</h2>
-    <div id="status">جاهز للمسح الضوئي...</div>
+    <h3 style="margin-top:0;">كاشف الفواتير 📄</h3>
+    <div id="status">جاهز للاستخدام</div>
 
-    <video id="video" autoplay playsinline></video>
-    <img id="preview-img">
-    <canvas id="canvas" style="display:none;"></canvas>
+    <div class="image-wrapper">
+        <video id="video" autoplay playsinline></video>
+        <img id="image-to-crop">
+    </div>
 
-    <button class="btn btn-main" id="start-btn">📸 فتح الكاميرا</button>
-    <label class="btn btn-upload" for="file-upload">📁 اختر صورة من الاستوديو</label>
-    <input type="file" id="file-upload" accept="image/*" style="display:none;">
-    <button class="btn btn-main" id="capture-btn" style="display:none;">🖼️ التقاط ومعالجة</button>
+    <div id="upload-controls">
+        <button class="btn btn-primary" id="start-btn">📸 فتح الكاميرا</button>
+        <label class="btn btn-outline" for="file-upload">📁 رفع صورة</label>
+        <input type="file" id="file-upload" accept="image/*" style="display:none;">
+    </div>
+
+    <div id="crop-controls" style="display:none;">
+        <div style="display: flex; justify-content: space-between;">
+            <button class="btn btn-rotate" id="rotate-btn">🔄 دوران</button>
+            <button class="btn btn-rotate" style="background:#e74c3c;" id="cancel-btn">❌ إلغاء</button>
+        </div>
+        <button class="btn btn-success" id="process-btn">🔍 تعرف على البيانات</button>
+    </div>
 
     <div id="result-area" class="result-box">
-        <div class="info-row">الاسم: <b id="res-name">---</b></div>
-        <div class="info-row">الرقم: <b id="res-phone">---</b></div>
+        <div>الاسم: <b id="res-name"></b></div>
+        <div>الرقم: <b id="res-phone"></b></div>
+        <hr>
+        <div class="msg-list" id="msg-list"></div>
+        <textarea id="custom-msg" class="msg-input" placeholder="نص الرسالة..."></textarea>
+        <button class="btn btn-outline" style="font-size:12px; padding:5px;" onclick="saveMsg()">💾 حفظ هذه الرسالة</button>
         
-        <div class="message-section">
-            <label>اختر رسالة جاهزة أو اكتب واحدة:</label>
-            <div id="msg-list" class="msg-list"></div>
-            <textarea id="custom-msg" class="msg-input" rows="2" placeholder="اكتب رسالتك هنا..."></textarea>
-            <button class="btn btn-upload" onclick="saveNewMessage()">💾 حفظ كرسالة جاهزة</button>
+        <div class="grid" style="margin-top:10px;">
+            <button class="btn btn-success" id="wa-btn">💬 واتساب</button>
+            <button class="btn btn-primary" id="call-btn">📞 اتصال</button>
         </div>
-
-        <div class="actions-grid">
-            <button class="btn wa-btn" id="wa-btn">💬 واتساب</button>
-            <button class="btn call-btn" id="call-btn">📞 اتصال</button>
-            <button class="btn save-btn" id="save-btn" style="grid-column: span 2;">👤 حفظ في الهاتف (vCard)</button>
-        </div>
+        <button class="btn" style="background:#f1c40f; color:black; margin-top:10px;" id="save-contact">👤 حفظ كجهة اتصال</button>
     </div>
 </div>
 
 <script>
+    let cropper;
+    const imgElement = document.getElementById('image-to-crop');
     const video = document.getElementById('video');
-    const previewImg = document.getElementById('preview-img');
-    const canvas = document.getElementById('canvas');
     const status = document.getElementById('status');
     const resultArea = document.getElementById('result-area');
-    const msgListDiv = document.getElementById('msg-list');
-    const customMsgInput = document.getElementById('custom-msg');
+    
+    let detectedData = { name: "غير معروف", phone: "" };
+    let savedMsgs = JSON.parse(localStorage.getItem('msgs')) || ["أهلاً، نود تأكيد طلبك.", "الطلب في الطريق."];
 
-    let detectedData = { name: "من الفاتورة", phone: "" };
-    let savedMessages = JSON.parse(localStorage.getItem('my_messages')) || ["أهلاً بك، نود التأكيد على طلبك.", "طلبك جاهز للتوصيل."];
-
-    // --- إدارة الرسائل الجاهزة ---
-    function renderMessages() {
-        msgListDiv.innerHTML = '';
-        savedMessages.forEach((msg, index) => {
-            const chip = document.createElement('div');
-            chip.className = 'msg-chip';
-            chip.innerText = msg.substring(0, 20) + '...';
-            chip.onclick = () => {
-                customMsgInput.value = msg;
-                document.querySelectorAll('.msg-chip').forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
-            };
-            msgListDiv.appendChild(chip);
-        });
-    }
-
-    function saveNewMessage() {
-        const val = customMsgInput.value.trim();
-        if (val && !savedMessages.includes(val)) {
-            savedMessages.push(val);
-            localStorage.setItem('my_messages', JSON.stringify(savedMessages));
-            renderMessages();
-        }
-    }
-
-    // --- تشغيل الكاميرا والرفع ---
+    // --- 1. فتح الكاميرا أو الرفع ---
     document.getElementById('start-btn').onclick = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
         video.style.display = "block";
-        previewImg.style.display = "none";
-        document.getElementById('capture-btn').style.display = "block";
+        imgElement.style.display = "none";
+        status.innerText = "التقط صورة واضحة للاسم والرقم";
+        
+        // تحويل الزر لالتقاط
+        document.getElementById('start-btn').innerText = "📸 التقاط الصورة الآن";
+        document.getElementById('start-btn').onclick = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            initCropper(canvas.toDataURL('image/png'));
+            stream.getTracks().forEach(t => t.stop());
+            video.style.display = "none";
+        };
     };
 
     document.getElementById('file-upload').onchange = (e) => {
         const reader = new FileReader();
-        reader.onload = (ev) => {
-            previewImg.src = ev.target.result;
-            previewImg.style.display = "block";
-            video.style.display = "none";
-            processOCR(ev.target.result);
-        };
+        reader.onload = (ev) => initCropper(ev.target.result);
         reader.readAsDataURL(e.target.files[0]);
     };
 
-    document.getElementById('capture-btn').onclick = () => {
-        const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        processOCR(canvas.toDataURL('image/png'));
+    // --- 2. تهيئة أداة القص (Cropper) ---
+    function initCropper(source) {
+        imgElement.src = source;
+        imgElement.style.display = "block";
+        document.getElementById('upload-controls').style.display = "none";
+        document.getElementById('crop-controls').style.display = "block";
+        resultArea.style.display = "none";
+        
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(imgElement, {
+            viewMode: 1,
+            autoCropArea: 0.8,
+            checkOrientation: true
+        });
+        status.innerText = "حدد منطقة (الاسم والرقم) ثم اضغط 'تعرف'";
+    }
+
+    document.getElementById('rotate-btn').onclick = () => cropper.rotate(90);
+    document.getElementById('cancel-btn').onclick = () => location.reload();
+
+    // --- 3. المعالجة النهائية (OCR) ---
+    document.getElementById('process-btn').onclick = () => {
+        const croppedCanvas = cropper.getCroppedCanvas();
+        status.innerText = "جاري التحليل... ⏳";
+        
+        Tesseract.recognize(croppedCanvas.toDataURL(), 'eng+ara')
+            .then(({ data: { text } }) => {
+                analyze(text);
+            });
     };
 
-    // --- معالجة الصور واستخراج البيانات ---
-    function processOCR(source) {
-        status.innerText = "جاري القراءة والتحليل... ⏳";
-        Tesseract.recognize(source, 'eng+ara') // دعم العربية والإنجليزية
-            .then(({ data: { text } }) => analyzeText(text))
-            .catch(() => status.innerText = "فشل في قراءة الصورة");
-    }
+    function analyze(text) {
+        const phone = text.replace(/[\s-]/g, '').match(/01[0125][0-9]{8}/);
+        // البحث عن الاسم: محاولة ذكية لأول سطر يحتوي على نص
+        const lines = text.split('\n').filter(l => l.trim().length > 3);
+        let name = lines.find(l => l.includes("العميل") || l.includes("Name")) || lines[0] || "من الفاتورة";
+        name = name.replace(/العميل|Name|:|Customer/gi, '').trim();
 
-    function analyzeText(rawText) {
-        console.log("النص المكتشف:", rawText);
-        
-        // 1. استخراج الرقم
-        const phoneRegex = /01[0125][0-9]{8}/;
-        const phoneMatch = rawText.replace(/[\s-]/g, '').match(phoneRegex);
-
-        // 2. استخراج الاسم (محاولة البحث عن كلمة العميل أو Name)
-        let name = "غير معروف";
-        const lines = rawText.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes("العميل") || lines[i].toLowerCase().includes("customer") || lines[i].toLowerCase().includes("mohamed")) {
-                // نأخذ السطر الحالي أو الذي يليه كمحاولة لاستخراج الاسم
-                name = lines[i].replace(/العميل|:|Customer/gi, '').trim() || (lines[i+1] ? lines[i+1].trim() : "من الفاتورة");
-                break;
-            }
-        }
-
-        if (phoneMatch) {
-            detectedData.phone = phoneMatch[0];
-            detectedData.name = name;
+        if (phone) {
+            detectedData = { name, phone: phone[0] };
             document.getElementById('res-name').innerText = name;
-            document.getElementById('res-phone').innerText = phoneMatch[0];
+            document.getElementById('res-phone').innerText = phone[0];
             resultArea.style.display = "block";
-            status.innerText = "تمت العملية بنجاح! ✅";
+            status.innerText = "تم التعرف بنجاح!";
         } else {
-            status.innerText = "تعذر العثور على رقم هاتف واضح ❌";
+            status.innerText = "لم نجد رقم هاتف. جرب قص المنطقة بدقة أكبر.";
         }
     }
 
-    // --- الأكشن النهائي ---
+    // --- 4. الرسائل والأكشن ---
+    function renderMsgs() {
+        const box = document.getElementById('msg-list');
+        box.innerHTML = '';
+        savedMsgs.forEach(m => {
+            const c = document.createElement('div');
+            c.className = 'chip';
+            c.innerText = m.substring(0, 15) + '...';
+            c.onclick = () => document.getElementById('custom-msg').value = m;
+            box.appendChild(c);
+        });
+    }
+
+    window.saveMsg = () => {
+        const m = document.getElementById('custom-msg').value;
+        if (m) { savedMsgs.push(m); localStorage.setItem('msgs', JSON.stringify(savedMsgs)); renderMsgs(); }
+    };
+
     document.getElementById('wa-btn').onclick = () => {
-        const msg = encodeURIComponent(customMsgInput.value);
-        window.open(`https://wa.me/2${detectedData.phone}?text=${msg}`, '_blank');
+        const msg = encodeURIComponent(document.getElementById('custom-msg').value);
+        window.open(`https://wa.me/2${detectedData.phone}?text=${msg}`);
     };
 
     document.getElementById('call-btn').onclick = () => window.location.href = `tel:${detectedData.phone}`;
 
-    document.getElementById('save-btn').onclick = () => {
+    document.getElementById('save-contact').onclick = () => {
         const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${detectedData.name}\nTEL;TYPE=CELL:${detectedData.phone}\nEND:VCARD`;
-        const blob = new Blob([vcard], { type: "text/vcard" });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.download = `${detectedData.name}.vcf`;
-        a.href = url;
+        a.href = URL.createObjectURL(new Blob([vcard], {type: "text/vcard"}));
         a.click();
     };
 
-    renderMessages();
+    renderMsgs();
 </script>
 </body>
 </html>
