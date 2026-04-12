@@ -11,57 +11,56 @@
     <style>
         :root { --primary: #007bff; --success: #25D366; --bg: #f8f9fa; }
         
-        /* ضبط الصفحة لتكون متمركزة وبدون تمرير عرضي */
         html, body { 
             height: 100%; margin: 0; padding: 0; 
-            overflow-x: hidden; background: var(--bg);
+            overflow: hidden; background: var(--bg);
             display: flex; align-items: center; justify-content: center;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .container { 
             width: 95%; max-width: 450px; background: white; 
-            padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            box-sizing: border-box; text-align: center;
+            padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box; text-align: center; max-height: 98vh; overflow-y: auto;
         }
 
-        /* حاوية الصور والقص */
         .image-wrapper { 
-            width: 100%; min-height: 200px; background: #eee; 
-            border-radius: 15px; overflow: hidden; margin-bottom: 15px;
-            position: relative;
+            width: 100%; height: 250px; background: #eee; 
+            border-radius: 15px; overflow: hidden; margin-bottom: 10px;
+            position: relative; display: flex; align-items: center; justify-content: center;
         }
-        img { max-width: 100%; display: block; }
-        #video { width: 100%; display: none; border-radius: 15px; }
+        img { max-width: 100%; display: none; }
+        #video { width: 100%; height: 100%; object-fit: cover; display: none; border-radius: 15px; }
 
         .btn { 
             width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; 
-            border: none; font-weight: bold; cursor: pointer; transition: 0.2s;
-            font-size: 16px; display: block; box-sizing: border-box;
+            border: none; font-weight: bold; cursor: pointer; font-size: 16px; box-sizing: border-box;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
         .btn-outline { background: #6c757d; color: white; }
-        .btn-rotate { background: #f39c12; color: white; width: 48%; display: inline-block; }
 
-        /* منطقة النتائج والرسائل */
+        /* ستايل السلايدر */
+        .slider-container { margin: 15px 0; text-align: right; background: #f0f0f0; padding: 10px; border-radius: 10px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+
         .result-box { 
             display: none; border: 2px solid var(--primary); 
-            border-radius: 15px; padding: 15px; margin-top: 15px; text-align: right;
+            border-radius: 15px; padding: 12px; margin-top: 15px; text-align: right;
         }
-        .msg-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin: 10px 0; box-sizing: border-box; }
-        .msg-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-        .chip { background: #e9ecef; padding: 5px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; }
+        .msg-input { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc; margin: 8px 0; box-sizing: border-box; }
+        .msg-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+        .chip { background: #e9ecef; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid #ddd; }
         .chip.active { background: var(--primary); color: white; }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        #status { font-size: 13px; color: #777; margin-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        #status { font-size: 12px; color: #777; margin-bottom: 8px; height: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h3 style="margin-top:0;">كاشف الفواتير 📄</h3>
+    <h4 style="margin:0 0 10px 0;">كاشف الفواتير 📄</h4>
     <div id="status">جاهز للاستخدام</div>
 
     <div class="image-wrapper">
@@ -76,57 +75,62 @@
     </div>
 
     <div id="crop-controls" style="display:none;">
-        <div style="display: flex; justify-content: space-between;">
-            <button class="btn btn-rotate" id="rotate-btn">🔄 دوران</button>
-            <button class="btn btn-rotate" style="background:#e74c3c;" id="cancel-btn">❌ إلغاء</button>
+        <div class="slider-container">
+            <label>ضبط الزاوية (إزاحة 15°): <span id="angle-val">0</span>°</label>
+            <input type="range" id="rotate-slider" min="0" max="23" step="1" value="0">
         </div>
-        <button class="btn btn-success" id="process-btn">🔍 تعرف على البيانات</button>
+        <div class="grid">
+            <button class="btn btn-success" id="process-btn">🔍 تعرف الآن</button>
+            <button class="btn btn-outline" style="background:#e74c3c;" onclick="location.reload()">❌ إلغاء</button>
+        </div>
     </div>
 
     <div id="result-area" class="result-box">
-        <div>الاسم: <b id="res-name"></b></div>
-        <div>الرقم: <b id="res-phone"></b></div>
+        <div style="font-size: 14px;">الاسم: <b id="res-name"></b></div>
+        <div style="font-size: 14px;">الرقم: <b id="res-phone"></b></div>
         <hr>
         <div class="msg-list" id="msg-list"></div>
         <textarea id="custom-msg" class="msg-input" placeholder="نص الرسالة..."></textarea>
-        <button class="btn btn-outline" style="font-size:12px; padding:5px;" onclick="saveMsg()">💾 حفظ هذه الرسالة</button>
+        <button class="btn btn-outline" style="font-size:11px; padding:4px;" onclick="saveMsg()">💾 حفظ الرسالة</button>
         
-        <div class="grid" style="margin-top:10px;">
+        <div class="grid">
             <button class="btn btn-success" id="wa-btn">💬 واتساب</button>
             <button class="btn btn-primary" id="call-btn">📞 اتصال</button>
         </div>
-        <button class="btn" style="background:#f1c40f; color:black; margin-top:10px;" id="save-contact">👤 حفظ كجهة اتصال</button>
+        <button class="btn" style="background:#f1c40f; color:black; margin-top:8px;" id="save-contact">👤 حفظ جهة اتصال</button>
     </div>
 </div>
 
 <script>
     let cropper;
+    let currentRotation = 0;
     const imgElement = document.getElementById('image-to-crop');
     const video = document.getElementById('video');
     const status = document.getElementById('status');
     const resultArea = document.getElementById('result-area');
+    const angleVal = document.getElementById('angle-val');
+    const rotateSlider = document.getElementById('rotate-slider');
     
     let detectedData = { name: "غير معروف", phone: "" };
-    let savedMsgs = JSON.parse(localStorage.getItem('msgs')) || ["أهلاً، نود تأكيد طلبك.", "الطلب في الطريق."];
+    let savedMsgs = JSON.parse(localStorage.getItem('msgs')) || ["أهلاً بك، نؤكد طلبك."];
 
-    // --- 1. فتح الكاميرا أو الرفع ---
+    // --- 1. الكاميرا والرفع ---
     document.getElementById('start-btn').onclick = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        video.srcObject = stream;
-        video.style.display = "block";
-        imgElement.style.display = "none";
-        status.innerText = "التقط صورة واضحة للاسم والرقم";
-        
-        // تحويل الزر لالتقاط
-        document.getElementById('start-btn').innerText = "📸 التقاط الصورة الآن";
-        document.getElementById('start-btn').onclick = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            initCropper(canvas.toDataURL('image/png'));
-            stream.getTracks().forEach(t => t.stop());
-            video.style.display = "none";
-        };
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            video.style.display = "block";
+            imgElement.style.display = "none";
+            document.getElementById('start-btn').innerText = "📸 التقط الصورة";
+            document.getElementById('start-btn').onclick = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                initCropper(canvas.toDataURL('image/png'));
+                stream.getTracks().forEach(t => t.stop());
+                video.style.display = "none";
+            };
+        } catch(e) { alert("تعذر فتح الكاميرا"); }
     };
 
     document.getElementById('file-upload').onchange = (e) => {
@@ -135,7 +139,7 @@
         reader.readAsDataURL(e.target.files[0]);
     };
 
-    // --- 2. تهيئة أداة القص (Cropper) ---
+    // --- 2. التحكم في القص والدوران ---
     function initCropper(source) {
         imgElement.src = source;
         imgElement.style.display = "block";
@@ -146,31 +150,35 @@
         if (cropper) cropper.destroy();
         cropper = new Cropper(imgElement, {
             viewMode: 1,
-            autoCropArea: 0.8,
-            checkOrientation: true
+            checkOrientation: true,
+            ready() { status.innerText = "اضبط الزاوية والقص ثم اضغط تعرف"; }
         });
-        status.innerText = "حدد منطقة (الاسم والرقم) ثم اضغط 'تعرف'";
     }
 
-    document.getElementById('rotate-btn').onclick = () => cropper.rotate(90);
-    document.getElementById('cancel-btn').onclick = () => location.reload();
+    // منطق السلايدر: 24 خطوة، كل خطوة 15 درجة
+    rotateSlider.oninput = function() {
+        let step = parseInt(this.value);
+        let angle = step * 15;
+        angleVal.innerText = angle;
+        
+        // حساب الفرق للدوران
+        let relativeRotation = angle - currentRotation;
+        cropper.rotate(relativeRotation);
+        currentRotation = angle;
+    };
 
-    // --- 3. المعالجة النهائية (OCR) ---
+    // --- 3. التحليل OCR ---
     document.getElementById('process-btn').onclick = () => {
         const croppedCanvas = cropper.getCroppedCanvas();
-        status.innerText = "جاري التحليل... ⏳";
-        
+        status.innerText = "جاري القراءة... ⏳";
         Tesseract.recognize(croppedCanvas.toDataURL(), 'eng+ara')
-            .then(({ data: { text } }) => {
-                analyze(text);
-            });
+            .then(({ data: { text } }) => analyze(text));
     };
 
     function analyze(text) {
         const phone = text.replace(/[\s-]/g, '').match(/01[0125][0-9]{8}/);
-        // البحث عن الاسم: محاولة ذكية لأول سطر يحتوي على نص
         const lines = text.split('\n').filter(l => l.trim().length > 3);
-        let name = lines.find(l => l.includes("العميل") || l.includes("Name")) || lines[0] || "من الفاتورة";
+        let name = lines.find(l => l.includes("العميل") || l.includes("Name") || l.includes("Mohamed")) || lines[0] || "من الفاتورة";
         name = name.replace(/العميل|Name|:|Customer/gi, '').trim();
 
         if (phone) {
@@ -178,20 +186,20 @@
             document.getElementById('res-name').innerText = name;
             document.getElementById('res-phone').innerText = phone[0];
             resultArea.style.display = "block";
-            status.innerText = "تم التعرف بنجاح!";
+            status.innerText = "تمت العملية!";
         } else {
-            status.innerText = "لم نجد رقم هاتف. جرب قص المنطقة بدقة أكبر.";
+            status.innerText = "لم يتم اكتشاف رقم هاتف";
         }
     }
 
-    // --- 4. الرسائل والأكشن ---
+    // --- 4. المهام الإضافية ---
     function renderMsgs() {
         const box = document.getElementById('msg-list');
         box.innerHTML = '';
         savedMsgs.forEach(m => {
             const c = document.createElement('div');
             c.className = 'chip';
-            c.innerText = m.substring(0, 15) + '...';
+            c.innerText = m.substring(0, 12) + '..';
             c.onclick = () => document.getElementById('custom-msg').value = m;
             box.appendChild(c);
         });
