@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كاشف أرقام الفواتير</title>
+    <title>كاشف أرقام الفواتير المتطور</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #video { width: 100%; border-radius: 10px; display: none; }
+        #video, #preview-img { width: 100%; border-radius: 10px; display: none; margin-bottom: 10px; }
         #canvas { display: none; }
-        button { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; margin: 10px 5px; font-size: 16px; width: 80%; }
+        button, label { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; margin: 10px 5px; font-size: 16px; display: inline-block; width: 80%; }
+        .upload-btn { background: #6c757d; } /* لون مختلف لزر الرفع */
         .result-box { margin-top: 20px; display: none; padding: 15px; border: 2px dashed #007bff; border-radius: 10px; }
         .options-btn { background: #28a745; width: 100%; }
         .wa-btn { background: #25D366; }
         .save-btn { background: #ffc107; color: black; }
-        #status { color: #555; margin: 10px 0; }
+        #status { color: #555; margin: 10px 0; font-weight: bold; }
+        input[type="file"] { display: none; } /* إخفاء زر الملفات الافتراضي */
     </style>
 </head>
 <body>
@@ -24,12 +26,19 @@
     <h2>التقاط رقم الهاتف من الفاتورة</h2>
     
     <video id="video" autoplay playsinline></video>
+    <img id="preview-img" alt="معاينة الصورة">
     <canvas id="canvas"></canvas>
 
-    <button id="start-btn">فتح الكاميرا</button>
-    <button id="capture-btn" style="display:none;">التقاط الصورة والتعرف على الرقم</button>
+    <div id="controls">
+        <button id="start-btn">فتح الكاميرا</button>
+        
+        <label for="file-upload" class="upload-btn">اختر صورة من الجهاز</label>
+        <input type="file" id="file-upload" accept="image/*">
+        
+        <button id="capture-btn" style="display:none;">التقاط ومعالجة</button>
+    </div>
     
-    <div id="status"></div>
+    <div id="status">جاهز للاستخدام</div>
 
     <div id="result-area" class="result-box">
         <p>الرقم المكتشف: <strong id="phone-number"></strong></p>
@@ -42,16 +51,18 @@
 
 <script>
     const video = document.getElementById('video');
+    const previewImg = document.getElementById('preview-img');
     const canvas = document.getElementById('canvas');
     const startBtn = document.getElementById('start-btn');
     const captureBtn = document.getElementById('capture-btn');
+    const fileUpload = document.getElementById('file-upload');
     const status = document.getElementById('status');
     const resultArea = document.getElementById('result-area');
     const phoneDisplay = document.getElementById('phone-number');
 
     let detectedNumber = "";
 
-    // 1. فتح الكاميرا الخلفية
+    // --- 1. التعامل مع الكاميرا ---
     startBtn.onclick = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -59,38 +70,66 @@
             });
             video.srcObject = stream;
             video.style.display = "block";
+            previewImg.style.display = "none";
             startBtn.style.display = "none";
             captureBtn.style.display = "inline-block";
+            status.innerText = "الكاميرا تعمل... وجهها نحو الرقم";
         } catch (err) {
             alert("خطأ في تشغيل الكاميرا: " + err);
         }
     };
 
-    // 2. التقاط الصورة ومعالجتها
     captureBtn.onclick = () => {
         const context = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
+        processImage(canvas.toDataURL('image/png'));
+    };
+
+    // --- 2. التعامل مع ملفات الصور من الجهاز ---
+    fileUpload.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const imgData = event.target.result;
+            // إظهار معاينة للصورة المرفوعة
+            previewImg.src = imgData;
+            previewImg.style.display = "block";
+            video.style.display = "none"; // إخفاء الكاميرا إذا كانت تعمل
+            captureBtn.style.display = "none";
+            startBtn.style.display = "inline-block";
+            
+            processImage(imgData);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // --- 3. وظيفة المعالجة الموحدة (Tesseract) ---
+    function processImage(source) {
         status.innerText = "جاري التعرف على الرقم... انتظر لحظة";
-        
-        // تحويل الصورة لنص باستخدام Tesseract
-        Tesseract.recognize(canvas.toDataURL('image/png'), 'eng')
+        resultArea.style.display = "none";
+
+        Tesseract.recognize(source, 'eng')
             .then(({ data: { text } }) => {
+                console.log("النص المستخرج:", text); // لمتابعة النتائج في القنصل
                 extractPhone(text);
             })
             .catch(err => {
                 status.innerText = "حدث خطأ أثناء المعالجة";
                 console.error(err);
             });
-    };
+    }
 
-    // 3. استخراج الرقم باستخدام Regex
+    // --- 4. استخراج الرقم باستخدام Regex ---
     function extractPhone(text) {
-        // البحث عن أي رقم موبايل يبدأ بـ 01 (تنسيق مصري) ومكون من 11 رقم
+        // تنظيف النص من المسافات والشرطات لزيادة دقة البحث
+        const cleanedText = text.replace(/[\s-]/g, '');
+        // Regex يبحث عن أرقام مصرية (010, 011, 012, 015)
         const phoneRegex = /01[0125][0-9]{8}/;
-        const match = text.replace(/\s/g, '').match(phoneRegex);
+        const match = cleanedText.match(phoneRegex);
 
         if (match) {
             detectedNumber = match[0];
@@ -98,29 +137,19 @@
             resultArea.style.display = "block";
             status.innerText = "تم العثور على الرقم!";
         } else {
-            status.innerText = "لم يتم العثور على رقم واضح، حاول مرة أخرى.";
+            status.innerText = "لم يتم العثور على رقم واضح، حاول مرة أخرى أو تأكد من إضاءة الصورة.";
         }
     }
 
-    // --- الخيارات الثلاثة ---
-
-    // الأول: الاتصال
-    document.getElementById('call-btn').onclick = () => {
-        window.location.href = `tel:${detectedNumber}`;
-    };
-
-    // الثاني: واتساب
-    document.getElementById('wa-btn').onclick = () => {
-        window.open(`https://wa.me/2${detectedNumber}`, '_blank');
-    };
-
-    // الثالث: حفظ الرقم (عبر ملف vCard)
+    // --- 5. أزرار الأكشن (اتصال، واتساب، حفظ) ---
+    document.getElementById('call-btn').onclick = () => window.location.href = `tel:${detectedNumber}`;
+    document.getElementById('wa-btn').onclick = () => window.open(`https://wa.me/2${detectedNumber}`, '_blank');
     document.getElementById('save-btn').onclick = () => {
         const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:من الفاتورة\nTEL;TYPE=CELL:${detectedNumber}\nEND:VCARD`;
         const blob = new Blob([vcard], { type: "text/vcard" });
         const url = URL.createObjectURL(blob);
         const newLink = document.createElement('a');
-        newLink.download = `${detectedNumber}.vcf`;
+        newLink.download = `contact_${detectedNumber}.vcf`;
         newLink.href = url;
         newLink.click();
     };
