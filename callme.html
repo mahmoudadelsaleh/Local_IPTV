@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>كاشف الفواتير المطور</title>
+    <title>كاشف الفواتير النقي</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -11,25 +11,25 @@
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --bg: #f0f2f5; }
         
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif; }
         
         .main-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 500px; margin: auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
 
-        /* حاوية الصورة - عرض كامل وتوسيط مطلق */
+        /* حاوية الصورة النقيّة - تم حذف كافة المسافات والهوامش */
         .preview-container { 
-            flex: 0 0 45%; background: #222; position: relative; 
+            flex: 0 0 45%; background: #000; position: relative; 
             display: flex; align-items: center; justify-content: center; 
-            overflow: hidden; border-bottom: 4px solid var(--primary);
+            overflow: hidden; padding: 0; margin: 0; border: none; /* حذف Padding, Margin, Border */
         }
-        #video, #image-to-crop { max-width: 100%; max-height: 100%; object-fit: contain; margin: auto; }
+        #video, #image-to-crop { max-width: 100%; max-height: 100%; object-fit: contain; margin: 0; }
 
         .controls-section { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-        /* توحيد مقاسات الأزرار */
+        /* الأزرار الموحدة */
         .btn { 
             width: 85%; max-width: 300px; padding: 12px; margin: 6px auto; 
             border-radius: 12px; border: none; font-weight: bold; cursor: pointer; 
-            font-size: 16px; display: block; transition: 0.3s;
+            font-size: 16px; display: block; transition: 0.2s;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
@@ -159,10 +159,11 @@
             document.getElementById('crop-btns').style.display = "none";
             document.getElementById('status').innerText = "تمت القراءة بنجاح ✅";
             
-            // جعل الصورة المقتصة هي الأصلية وتوسيطها
+            // جعل الصورة المقتصة هي الأصلية وتوسيطها وتجريد المسافات
             cropper.destroy();
             img.src = canvas.toDataURL();
             img.style.display = "block";
+            img.style.margin = "0"; // ضمان حذف الهوامش من الصورة نفسها
         });
     };
 
