@@ -3,150 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>الاتصال بالعملاء</title>
+    <title>كاشف الفواتير المتكامل</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
     <style>
-        :root { --primary: #007bff; --success: #25D366; --bg: #f8f9fa; }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
-        .container { width: 95%; max-width: 420px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-height: 98vh; overflow-y: auto; }
+        :root { --primary: #007bff; --success: #25D366; --bg: #f4f7f6; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: sans-serif; }
         
-        /* منطقة العرض */
-        .image-wrapper { width: 100%; height: 220px; background: #eee; border-radius: 15px; overflow: hidden; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; position: relative; }
-        img, video { max-width: 100%; max-height: 100%; }
+        .main-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 500px; margin: auto; background: white; }
 
-        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+        /* منطقة المعاينة - جعلناها تأخذ مساحة كافية لرؤية التفاصيل */
+        .preview-container { flex: 0 0 40%; background: #333; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 2px solid var(--primary); }
+        #video, #image-to-crop { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .controls-section { flex: 1; padding: 15px; overflow-y: auto; text-align: center; }
+
+        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; display: block; }
         .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
         .btn-outline { background: #6c757d; color: white; }
-        .btn-edit { background: #f1c40f; color: black; padding: 5px 10px; width: auto; font-size: 13px; display: inline-block; }
 
-        /* منطقة النتائج */
-        .result-box { display: none; border: 2px solid var(--primary); border-radius: 15px; padding: 12px; margin-top: 10px; text-align: right; }
-        .phone-display { font-size: 24px; font-weight: bold; color: #d32f2f; text-align: center; margin: 5px 0; letter-spacing: 2px; }
+        /* منطقة النتائج والتعديل */
+        .result-card { display: none; text-align: right; }
+        .edit-field { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px; background: #fffbe6; }
+        .phone-val { font-size: 24px; font-weight: bold; color: #d32f2f; text-align: center; display: block; margin: 5px 0; border: 2px solid #eee; padding: 5px; border-radius: 8px; }
 
-        /* لوحة المفاتيح المصغرة */
-        #num-pad { display: none; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #e2e8f0; padding: 8px; border-radius: 10px; margin-top: 10px; max-width: 200px; margin-left: auto; margin-right: auto; }
-        .key { background: white; padding: 10px; border-radius: 5px; font-weight: bold; font-size: 18px; text-align: center; cursor: pointer; box-shadow: 0 2px 0 #cbd5e1; }
-        .key:active { transform: translateY(1px); box-shadow: none; background: #f8fafc; }
-        .key.del { background: #f87171; color: white; }
-        .key.clear { background: #9ca3af; color: white; }
+        /* لوحة المفاتيح المصغرة 4 صفوف */
+        .mini-keyboard { display: none; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #eee; padding: 10px; border-radius: 12px; margin: 10px auto; max-width: 220px; }
+        .key { background: white; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 18px; text-align: center; cursor: pointer; box-shadow: 0 2px 0 #ccc; }
+        .key:active { transform: translateY(2px); box-shadow: none; background: #f0f0f0; }
+        .key.del { background: #ff4d4d; color: white; }
+        .key.clear { background: #999; color: white; }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        #status { font-size: 12px; color: #777; margin-bottom: 5px; height: 15px; }
+        /* الرسائل المقترحة */
+        .msg-box { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+        .chips-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .chip { background: #e9ecef; padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; }
+        .chip.active { background: var(--primary); color: white; }
+
+        #status { font-size: 12px; color: #666; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="status">جاهز</div>
-
-    <div class="image-wrapper">
+<div class="main-wrapper">
+    <div class="preview-container">
         <video id="video" autoplay playsinline></video>
         <img id="image-to-crop">
     </div>
 
-    <div id="upload-controls">
-        <button class="btn btn-primary" id="start-btn">📸 فتح الكاميرا</button>
-        <label class="btn btn-outline" for="file-upload" style="display:block; text-align:center;">📁 رفع صورة</label>
-        <input type="file" id="file-upload" accept="image/*" style="display:none;">
-    </div>
+    <div class="controls-section">
+        <div id="status">جاهز للمسح الضوئي</div>
 
-    <div id="crop-controls" style="display:none;">
-        <input type="range" id="rotate-slider" min="0" max="23" step="1" value="0" style="width:100%; margin: 10px 0;">
-        <button class="btn btn-primary" style="background:#28a745" id="process-btn">🔍 قراءة البيانات</button>
-    </div>
-
-    <div id="result-area" class="result-box">
-        <div style="font-size:14px;">الاسم: <b id="res-name"></b></div>
-        <div class="phone-display" id="res-phone"></div>
-        <div style="text-align:center;"><button class="btn btn-edit" id="toggle-edit">✏️ تعديل الرقم</button></div>
-        
-        <div id="num-pad">
-            <div class="key" onclick="k('7')">7</div><div class="key" onclick="k('8')">8</div><div class="key" onclick="k('9')">9</div>
-            <div class="key" onclick="k('4')">4</div><div class="key" onclick="k('5')">5</div><div class="key" onclick="k('6')">6</div>
-            <div class="key" onclick="k('1')">1</div><div class="key" onclick="k('2')">2</div><div class="key" onclick="k('3')">3</div>
-            <div class="key del" onclick="k('X')">X</div><div class="key" onclick="k('0')">0</div><div class="key clear" onclick="k('C')">C</div>
+        <div id="init-btns">
+            <button class="btn btn-primary" id="btn-camera">📸 فتح الكاميرا</button>
+            <label class="btn btn-outline" for="file-in">📁 رفع صورة</label>
+            <input type="file" id="file-in" accept="image/*" style="display:none;">
         </div>
 
-        <div class="grid" style="margin-top:10px;">
-            <button class="btn btn-primary" style="background:#25D366" id="wa-btn">واتساب</button>
-            <button class="btn btn-primary" id="call-btn">اتصال</button>
+        <div id="crop-btns" style="display:none;">
+            <div style="background:#eee; padding:5px; border-radius:10px; margin-bottom:10px;">
+                <label style="font-size:12px;">تدوير (15° لكل خطوة):</label>
+                <input type="range" id="rot-slider" min="0" max="23" step="1" value="0" style="width:100%">
+            </div>
+            <button class="btn btn-success" id="btn-ocr">🔍 قراءة البيانات</button>
+            <button class="btn" style="background:#e74c3c; color:white;" onclick="location.reload()">إلغاء</button>
+        </div>
+
+        <div id="result-ui" class="result-card">
+            <label style="font-size:12px;">اسم العميل:</label>
+            <input type="text" id="name-input" class="edit-field" placeholder="اسم العميل">
+            
+            <label style="font-size:12px;">رقم الهاتف:</label>
+            <div class="phone-val" id="phone-display"></div>
+            
+            <div style="text-align:center;">
+                <button class="btn" style="background:#f1c40f; width:auto; font-size:12px; padding:5px 15px;" onclick="toggleKB()">✏️ تعديل الرقم</button>
+            </div>
+
+            <div id="mini-kb" class="mini-keyboard">
+                <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
+                <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
+                <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
+                <div class="key del" onclick="press('X')">X</div><div class="key" onclick="press('0')">0</div><div class="key clear" onclick="press('C')">C</div>
+            </div>
+
+            <div class="msg-box">
+                <div class="chips-container" id="chips"></div>
+                <textarea id="msg-text" class="edit-field" rows="2" placeholder="اكتب رسالة واتساب..."></textarea>
+                <button class="btn" style="background:#ddd; font-size:11px; padding:4px;" onclick="saveCustomMsg()">💾 حفظ هذه الرسالة</button>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                <button class="btn btn-success" id="btn-wa">💬 واتساب</button>
+                <button class="btn btn-primary" id="btn-call">📞 اتصال</button>
+            </div>
+            <button class="btn" style="background:#f39c12; color:white; margin-top:10px;" id="btn-vcf">👤 حفظ في الهاتف</button>
         </div>
     </div>
 </div>
 
 <script>
-    let cropper, currentRot = 0, detData = { name: "", phone: "" };
+    let cropper, currentRot = 0;
     const img = document.getElementById('image-to-crop'), vid = document.getElementById('video');
+    const phoneDisp = document.getElementById('phone-display'), nameInput = document.getElementById('name-input');
+    const msgText = document.getElementById('msg-text'), chipsDiv = document.getElementById('chips');
 
-    // 1. التقاط
-    document.getElementById('start-btn').onclick = async () => {
-        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        vid.srcObject = s; vid.style.display = "block";
-        document.getElementById('start-btn').innerText = "التقط";
-        document.getElementById('start-btn').onclick = () => {
+    let savedMsgs = JSON.parse(localStorage.getItem('user_msgs')) || ["أهلاً بك، تم استلام طلبك.", "الطلب جاهز للتسليم."];
+
+    // --- 1. الكاميرا والرفع ---
+    document.getElementById('btn-camera').onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        vid.srcObject = stream; vid.style.display = "block";
+        document.getElementById('btn-camera').innerText = "📸 التقط الصورة الآن";
+        document.getElementById('btn-camera').onclick = () => {
             const c = document.createElement('canvas');
             c.width = vid.videoWidth; c.height = vid.videoHeight;
             c.getContext('2d').drawImage(vid, 0, 0);
-            init(c.toDataURL()); s.getTracks().forEach(t => t.stop()); vid.style.display = "none";
+            initCrop(c.toDataURL()); stream.getTracks().forEach(t => t.stop()); vid.style.display = "none";
         };
     };
 
-    document.getElementById('file-upload').onchange = (e) => {
-        const r = new FileReader(); r.onload = (ev) => init(ev.target.result); r.readAsDataURL(e.target.files[0]);
+    document.getElementById('file-in').onchange = (e) => {
+        const r = new FileReader(); r.onload = (ev) => initCrop(ev.target.result); r.readAsDataURL(e.target.files[0]);
     };
 
-    function init(src) {
+    function initCrop(src) {
         img.src = src; img.style.display = "block";
-        document.getElementById('upload-controls').style.display = "none";
-        document.getElementById('crop-controls').style.display = "block";
+        document.getElementById('init-btns').style.display = "none";
+        document.getElementById('crop-btns').style.display = "block";
         if (cropper) cropper.destroy();
-        cropper = new Cropper(img, { viewMode: 1 });
+        cropper = new Cropper(img, { viewMode: 1, autoCropArea: 0.8 });
     }
 
-    document.getElementById('rotate-slider').oninput = function() {
+    document.getElementById('rot-slider').oninput = function() {
         let a = this.value * 15; cropper.rotate(a - currentRot); currentRot = a;
     };
 
-    // 2. معالجة
-    document.getElementById('process-btn').onclick = () => {
+    // --- 2. المعالجة OCR ---
+    document.getElementById('btn-ocr').onclick = () => {
         const canvas = cropper.getCroppedCanvas();
-        document.getElementById('status').innerText = "جاري القراءة...";
+        document.getElementById('status').innerText = "جاري القراءة... ⏳";
         Tesseract.recognize(canvas.toDataURL(), 'eng+ara').then(({ data: { text } }) => {
             const p = text.replace(/[\s-]/g, '').match(/01[0125][0-9]{8}/);
-            const l = text.split('\n').filter(i => i.trim().length > 2);
-            detData.name = l[0] ? l[0].replace(/العميل|Name|:/gi, '').trim() : "عميل";
-            detData.phone = p ? p[0] : "";
+            const lines = text.split('\n').filter(l => l.trim().length > 2);
             
-            document.getElementById('res-name').innerText = detData.name;
-            document.getElementById('res-phone').innerText = detData.phone || "لم يتم العثور";
-            document.getElementById('result-area').style.display = "block";
-            document.getElementById('crop-controls').style.display = "none";
-            document.getElementById('status').innerText = "تم";
-            // تثبيت الصورة المقطوعة للمراجعة
+            nameInput.value = lines[0] ? lines[0].replace(/العميل|Name|:|Customer/gi, '').trim() : "عميل جديد";
+            phoneDisp.innerText = p ? p[0] : "";
+            
+            document.getElementById('result-ui').style.display = "block";
+            document.getElementById('crop-btns').style.display = "none";
+            document.getElementById('status').innerText = "تمت القراءة";
+            
+            // تثبيت الصورة المقطوعة للمراجعة بجودة واضحة
             cropper.destroy(); img.src = canvas.toDataURL();
         });
     };
 
-    // 3. تعديل يدوي
-    document.getElementById('toggle-edit').onclick = () => {
-        const pad = document.getElementById('num-pad');
-        pad.style.display = pad.style.display === 'grid' ? 'none' : 'grid';
+    // --- 3. لوحة المفاتيح والتعديل ---
+    function toggleKB() {
+        const kb = document.getElementById('mini-kb');
+        kb.style.display = (kb.style.display === 'grid') ? 'none' : 'grid';
+    }
+
+    window.press = (v) => {
+        if (v === 'C') phoneDisp.innerText = '';
+        else if (v === 'X') phoneDisp.innerText = phoneDisp.innerText.slice(0, -1);
+        else if (phoneDisp.innerText.length < 11) phoneDisp.innerText += v;
     };
 
-    window.k = (val) => {
-        const disp = document.getElementById('res-phone');
-        if (val === 'C') disp.innerText = '';
-        else if (val === 'X') disp.innerText = disp.innerText.slice(0, -1);
-        else if (disp.innerText.length < 11) disp.innerText += val;
-        detData.phone = disp.innerText;
+    // --- 4. الرسائل والوظائف ---
+    function renderChips() {
+        chipsDiv.innerHTML = '';
+        savedMsgs.forEach(m => {
+            const c = document.createElement('div'); c.className = 'chip';
+            c.innerText = m.substring(0, 15) + '...';
+            c.onclick = () => msgText.value = m;
+            chipsDiv.appendChild(c);
+        });
+    }
+
+    window.saveCustomMsg = () => {
+        if (msgText.value) { savedMsgs.push(msgText.value); localStorage.setItem('user_msgs', JSON.stringify(savedMsgs)); renderChips(); }
     };
 
-    // 4. تنفيذ
-    document.getElementById('wa-btn').onclick = () => window.open(`https://wa.me/2${detData.phone}`);
-    document.getElementById('call-btn').onclick = () => window.location.href = `tel:${detData.phone}`;
+    document.getElementById('btn-wa').onclick = () => window.open(`https://wa.me/2${phoneDisp.innerText}?text=${encodeURIComponent(msgText.value)}`);
+    document.getElementById('btn-call').onclick = () => window.location.href = `tel:${phoneDisp.innerText}`;
+    
+    document.getElementById('btn-vcf').onclick = () => {
+        const vcf = `BEGIN:VCARD\nVERSION:3.0\nFN:${nameInput.value}\nTEL;TYPE=CELL:${phoneDisp.innerText}\nEND:VCARD`;
+        const a = document.createElement('a');
+        a.download = `${nameInput.value}.vcf`;
+        a.href = URL.createObjectURL(new Blob([vcf], {type: "text/vcard"}));
+        a.click();
+    };
+
+    renderChips();
 </script>
 </body>
 </html>
