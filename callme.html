@@ -3,47 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>كاشف الفواتير المتكامل</title>
+    <title>كاشف الفواتير المطور</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
     <style>
-        :root { --primary: #007bff; --success: #25D366; --bg: #f4f7f6; }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: sans-serif; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --bg: #f0f2f5; }
         
-        .main-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 500px; margin: auto; background: white; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        .main-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 500px; margin: auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
 
-        /* منطقة المعاينة - تم تعديلها لتظهر الصورة كاملة وواضحة */
-        .preview-container { flex: 0 0 50%; background: #333; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 2px solid var(--primary); }
-        #video, #image-to-crop { max-width: 100%; max-height: 100%; object-fit: contain; }
+        /* حاوية الصورة - عرض كامل وتوسيط مطلق */
+        .preview-container { 
+            flex: 0 0 45%; background: #222; position: relative; 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; border-bottom: 4px solid var(--primary);
+        }
+        #video, #image-to-crop { max-width: 100%; max-height: 100%; object-fit: contain; margin: auto; }
 
-        .controls-section { flex: 1; padding: 15px; overflow-y: auto; text-align: center; }
+        .controls-section { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; display: block; }
+        /* توحيد مقاسات الأزرار */
+        .btn { 
+            width: 85%; max-width: 300px; padding: 12px; margin: 6px auto; 
+            border-radius: 12px; border: none; font-weight: bold; cursor: pointer; 
+            font-size: 16px; display: block; transition: 0.3s;
+        }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
         .btn-outline { background: #6c757d; color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-edit { background: #f1c40f; color: black; width: auto; padding: 6px 20px; font-size: 14px; }
 
-        /* منطقة النتائج والتعديل */
-        .result-card { display: none; text-align: right; }
-        .edit-field { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px; background: #fffbe6; }
-        .phone-val { font-size: 24px; font-weight: bold; color: #d32f2f; text-align: center; display: block; margin: 5px 0; border: 2px solid #eee; padding: 5px; border-radius: 8px; }
+        .result-card { width: 100%; display: none; margin-top: 10px; }
+        .edit-field { width: 90%; padding: 10px; border: 2px solid #ddd; border-radius: 10px; font-size: 18px; margin: 8px auto; background: #fffbe6; text-align: center; display: block; }
+        .phone-val { font-size: 26px; font-weight: bold; color: #d32f2f; text-align: center; margin: 10px auto; border: 2px dashed var(--primary); padding: 8px; border-radius: 10px; width: fit-content; min-width: 200px; }
 
-        /* لوحة المفاتيح المصغرة 4 صفوف */
-        .mini-keyboard { display: none; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #eee; padding: 10px; border-radius: 12px; margin: 10px auto; max-width: 220px; }
-        .key { background: white; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 18px; text-align: center; cursor: pointer; box-shadow: 0 2px 0 #ccc; }
-        .key:active { transform: translateY(2px); box-shadow: none; background: #f0f0f0; }
+        .mini-keyboard { display: none; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #eee; padding: 12px; border-radius: 15px; margin: 15px auto; width: 220px; }
+        .key { background: white; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 20px; text-align: center; cursor: pointer; box-shadow: 0 3px 0 #bbb; }
+        .key:active { transform: translateY(2px); box-shadow: none; }
         .key.del { background: #ff4d4d; color: white; }
-        .key.clear { background: #999; color: white; }
+        .key.clear { background: #888; color: white; }
 
-        /* الرسائل المقترحة */
-        .msg-box { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-        .chips-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-        .chip { background: #e9ecef; padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; }
+        .chips-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 10px 0; }
+        .chip { background: #e9ecef; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #ccc; }
         .chip.active { background: var(--primary); color: white; }
 
-        #status { font-size: 12px; color: #666; margin-bottom: 5px; }
+        #status { font-size: 13px; color: #555; margin-bottom: 8px; font-weight: bold; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 85%; max-width: 300px; margin: auto; }
     </style>
 </head>
 <body>
@@ -57,31 +66,26 @@
     <div class="controls-section">
         <div id="status">جاهز للمسح الضوئي</div>
 
-        <div id="init-btns">
+        <div id="init-btns" style="width: 100%;">
             <button class="btn btn-primary" id="btn-camera">📸 فتح الكاميرا</button>
-            <label class="btn btn-outline" for="file-in">📁 رفع صورة</label>
+            <label class="btn btn-outline" for="file-in" style="display: flex; align-items: center; justify-content: center;">📁 رفع صورة</label>
             <input type="file" id="file-in" accept="image/*" style="display:none;">
         </div>
 
-        <div id="crop-btns" style="display:none;">
-            <div style="background:#eee; padding:5px; border-radius:10px; margin-bottom:10px;">
-                <label style="font-size:12px;">تدوير (15° لكل خطوة):</label>
+        <div id="crop-btns" style="display:none; width: 100%;">
+            <div style="background:#e2e8f0; padding:10px; border-radius:12px; margin: 10px auto; width: 85%;">
+                <label style="font-size:13px; font-weight: bold;">تدوير الصورة:</label>
                 <input type="range" id="rot-slider" min="0" max="23" step="1" value="0" style="width:100%">
             </div>
             <button class="btn btn-success" id="btn-ocr">🔍 قراءة البيانات</button>
-            <button class="btn" style="background:#e74c3c; color:white;" onclick="location.reload()">إلغاء</button>
+            <button class="btn btn-danger" onclick="location.reload()">🔄 إعادة البدء</button>
         </div>
 
         <div id="result-ui" class="result-card">
-            <label style="font-size:12px;">اسم العميل:</label>
             <input type="text" id="name-input" class="edit-field" placeholder="اسم العميل">
-            
-            <label style="font-size:12px;">رقم الهاتف:</label>
             <div class="phone-val" id="phone-display"></div>
             
-            <div style="text-align:center;">
-                <button class="btn" style="background:#f1c40f; width:auto; font-size:12px; padding:5px 15px;" onclick="toggleKB()">✏️ تعديل الرقم</button>
-            </div>
+            <button class="btn btn-edit" onclick="toggleKB()">✏️ تعديل الرقم</button>
 
             <div id="mini-kb" class="mini-keyboard">
                 <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
@@ -90,17 +94,15 @@
                 <div class="key del" onclick="press('X')">X</div><div class="key" onclick="press('0')">0</div><div class="key clear" onclick="press('C')">C</div>
             </div>
 
-            <div class="msg-box">
-                <div class="chips-container" id="chips"></div>
-                <textarea id="msg-text" class="edit-field" rows="2" placeholder="اكتب رسالة واتساب..."></textarea>
-                <button class="btn" style="background:#ddd; font-size:11px; padding:4px;" onclick="saveCustomMsg()">💾 حفظ هذه الرسالة</button>
+            <div class="chips-container" id="chips"></div>
+            <textarea id="msg-text" class="edit-field" rows="2" style="font-size: 14px;" placeholder="اكتب رسالة واتساب..."></textarea>
+            
+            <div class="grid-2">
+                <button class="btn btn-success" style="width:100%;" id="btn-wa">واتساب</button>
+                <button class="btn btn-primary" style="width:100%;" id="btn-call">اتصال</button>
             </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                <button class="btn btn-success" id="btn-wa">💬 واتساب</button>
-                <button class="btn btn-primary" id="btn-call">📞 اتصال</button>
-            </div>
-            <button class="btn" style="background:#f39c12; color:white; margin-top:10px;" id="btn-vcf">👤 حفظ في الهاتف</button>
+            <button class="btn btn-outline" style="background:#f39c12;" id="btn-vcf">👤 حفظ كجهة اتصال</button>
+            <button class="btn btn-danger" onclick="location.reload()">🔄 فاتورة جديدة</button>
         </div>
     </div>
 </div>
@@ -113,16 +115,16 @@
 
     let savedMsgs = JSON.parse(localStorage.getItem('user_msgs')) || ["أهلاً بك، تم استلام طلبك.", "الطلب جاهز للتسليم."];
 
-    // --- 1. الكاميرا والرفع ---
     document.getElementById('btn-camera').onclick = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         vid.srcObject = stream; vid.style.display = "block";
-        document.getElementById('btn-camera').innerText = "📸 التقط الصورة الآن";
+        document.getElementById('btn-camera').innerText = "📸 التقاط الصورة";
         document.getElementById('btn-camera').onclick = () => {
             const c = document.createElement('canvas');
             c.width = vid.videoWidth; c.height = vid.videoHeight;
             c.getContext('2d').drawImage(vid, 0, 0);
-            initCrop(c.toDataURL()); stream.getTracks().forEach(t => t.stop()); vid.style.display = "none";
+            initCrop(c.toDataURL('image/png'));
+            stream.getTracks().forEach(t => t.stop()); vid.style.display = "none";
         };
     };
 
@@ -135,17 +137,17 @@
         document.getElementById('init-btns').style.display = "none";
         document.getElementById('crop-btns').style.display = "block";
         if (cropper) cropper.destroy();
-        cropper = new Cropper(img, { viewMode: 1, autoCropArea: 0.8 });
+        cropper = new Cropper(img, { viewMode: 1, autoCropArea: 0.8, responsive: true });
     }
 
     document.getElementById('rot-slider').oninput = function() {
         let a = this.value * 15; cropper.rotate(a - currentRot); currentRot = a;
     };
 
-    // --- 2. المعالجة OCR ---
     document.getElementById('btn-ocr').onclick = () => {
-        const canvas = cropper.getCroppedCanvas();
-        document.getElementById('status').innerText = "جاري القراءة... ⏳";
+        const canvas = cropper.getCroppedCanvas({ imageSmoothingHigh: true });
+        document.getElementById('status').innerText = "جاري التحليل... ⏳";
+        
         Tesseract.recognize(canvas.toDataURL(), 'eng+ara').then(({ data: { text } }) => {
             const p = text.replace(/[\s-]/g, '').match(/01[0125][0-9]{8}/);
             const lines = text.split('\n').filter(l => l.trim().length > 2);
@@ -155,14 +157,15 @@
             
             document.getElementById('result-ui').style.display = "block";
             document.getElementById('crop-btns').style.display = "none";
-            document.getElementById('status').innerText = "تمت القراءة";
+            document.getElementById('status').innerText = "تمت القراءة بنجاح ✅";
             
-            // الحل: تثبيت الصورة المقطوعة كاملة للمراجعة
-            cropper.destroy(); img.src = canvas.toDataURL();
+            // جعل الصورة المقتصة هي الأصلية وتوسيطها
+            cropper.destroy();
+            img.src = canvas.toDataURL();
+            img.style.display = "block";
         });
     };
 
-    // --- 3. لوحة المفاتيح والتعديل ---
     function toggleKB() {
         const kb = document.getElementById('mini-kb');
         kb.style.display = (kb.style.display === 'grid') ? 'none' : 'grid';
@@ -174,7 +177,6 @@
         else if (phoneDisp.innerText.length < 11) phoneDisp.innerText += v;
     };
 
-    // --- 4. الرسائل والوظائف ---
     function renderChips() {
         chipsDiv.innerHTML = '';
         savedMsgs.forEach(m => {
@@ -185,13 +187,8 @@
         });
     }
 
-    window.saveCustomMsg = () => {
-        if (msgText.value) { savedMsgs.push(msgText.value); localStorage.setItem('user_msgs', JSON.stringify(savedMsgs)); renderChips(); }
-    };
-
     document.getElementById('btn-wa').onclick = () => window.open(`https://wa.me/2${phoneDisp.innerText}?text=${encodeURIComponent(msgText.value)}`);
     document.getElementById('btn-call').onclick = () => window.location.href = `tel:${phoneDisp.innerText}`;
-    
     document.getElementById('btn-vcf').onclick = () => {
         const vcf = `BEGIN:VCARD\nVERSION:3.0\nFN:${nameInput.value}\nTEL;TYPE=CELL:${phoneDisp.innerText}\nEND:VCARD`;
         const a = document.createElement('a');
